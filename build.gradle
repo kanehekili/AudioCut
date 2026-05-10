@@ -55,7 +55,7 @@ pkgbase = audiocut
 \tarch = aarch64
 \tlicense = GPL-2.0-or-later
 ${depLines}
-\tsource = https://github.com/kanehekili/AudioCut/releases/download/${pkgver}/audiocut${pkgver}.tar
+\tsource = https://github.com/kanehekili/AudioCut/releases/download/V${pkgver}/audiocut${pkgver}.tar
 \tmd5sums = ${md5}
 
 pkgname = audiocut
@@ -72,8 +72,8 @@ tasks.register("update_readme") {
         def text   = readme.text
         text = text.replaceAll(/Version \d+\.\d+\.\d+/, "Version ${version}")
         text = text.replaceAll(
-            /https:\/\/github\.com\/kanehekili\/AudioCut\/releases\/download\/[\d.]+\/audiocut[\d.]+\.tar/,
-            "https://github.com/kanehekili/AudioCut/releases/download/${version}/audiocut${version}.tar"
+            /https:\/\/github\.com\/kanehekili\/AudioCut\/releases\/download\/V[\d.]+\/audiocut[\d.]+\.tar/,
+            "https://github.com/kanehekili/AudioCut/releases/download/V${version}/audiocut${version}.tar"
         )
         readme.text = text
         println "  README.md synced to version ${version}"

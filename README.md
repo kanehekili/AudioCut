@@ -1,9 +1,9 @@
 # AudioCut
 MP3/FLAC/WAV audio cutter- cutting audio files visually
 
-Version 1.0.0
+Version 1.0.1
 
-![Download](https://github.com/kanehekili/AudioCut/releases/download/V1.0.0/audiocut1.0.0.tar)
+![Download](https://github.com/kanehekili/AudioCut/releases/download/V1.0.1/audiocut1.0.1.tar)
 
 Audio cutter and joiner for Linux, based on ffmpeg. Cuts and joins audio files — optionally prepending or appending additional clips around the main selection.
 

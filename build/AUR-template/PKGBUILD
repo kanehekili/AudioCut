@@ -7,7 +7,7 @@ url="https://github.com/kanehekili/AudioCut"
 license=('GPL-2.0-or-later')
 depends=(@xlibsx@)
 arch=('x86_64' 'aarch64')
-source=(https://github.com/kanehekili/AudioCut/releases/download/@xxx@/audiocut@xxx@.tar)
+source=(https://github.com/kanehekili/AudioCut/releases/download/V@xxx@/audiocut@xxx@.tar)
 md5sums=(@md5sum@)
 
 package() {
