@@ -1,0 +1,13 @@
+Source: audiocut
+Maintainer: Kanehekili <kanehekili.media@gmail.com>
+Section: sound
+Priority: optional
+Build-Depends: debhelper
+Standards-Version: 3.0.0
+
+Package: audiocut
+Architecture: amd64 arm64 armhf
+Depends: @xlibsx@, ${shlibs:Depends}, ${misc:Depends}
+Description: MP3/FLAC/WAV audio cutter
+Section: sound
+Priority: optional

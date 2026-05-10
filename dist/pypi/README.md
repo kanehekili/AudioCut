@@ -3,7 +3,6 @@ MP3/FLAC/WAV audio cutter- cutting audio files visually
 
 Version 1.0.0
 
-[![Download](https://github.com/kanehekili/AudioCut/releases/download/1.0.0/audiocut1.0.0.tar)](https://github.com/kanehekili/AudioCut/releases/download/1.0.0/audiocut1.0.0.tar)
 
 Audio cutter and joiner for Linux, based on ffmpeg. Cuts and joins audio files — optionally prepending or appending additional clips around the main selection.
 
@@ -12,7 +11,7 @@ Supported output formats: mp3, flac, wav, ogg, aac, m4a.
 
 The current version is written in Python 3 and uses the Qt6 widget kit.
 
-![Screenshot](https://github.com/kanehekili/AudioCut/blob/main/audiocut.png)
+![Screenshot](https://raw.githubusercontent.com/kanehekili/AudioCut/main/audiocut.png)
 
 ### Prerequisites
 * ffmpeg ≥ 3.x

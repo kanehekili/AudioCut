@@ -1,0 +1,8 @@
+Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: audiocut
+Upstream-Contact: Kanehekili <kanehekili.media@gmail.com>
+
+Files: *
+Copyright: 2026, Kanehekili <kanehekili.media@gmail.com>
+License: GPL-2.0-or-later
+ Full text of licence can be found in /usr/share/common-licenses/GPL-2

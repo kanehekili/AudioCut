@@ -1,0 +1,236 @@
+import org.apache.tools.ant.filters.ReplaceTokens
+import java.security.MessageDigest
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+
+def version    = gradle.ext.version
+def pkgrelease = gradle.ext.pkgrelease
+def distros    = gradle.ext.distros
+
+// All output goes to dist/ — templates in build/ are never touched by "clean"
+def outDir = file("dist")
+
+// ── helpers ───────────────────────────────────────────────────────────────────
+
+def computeMD5(File f) {
+    def md = MessageDigest.getInstance("MD5")
+    f.eachByte(65536) { bytes, len -> md.update(bytes, 0, len) }
+    md.digest().encodeHex().toString()
+}
+
+// ReplaceTokens expects a plain Map<String,String>; coerce GStrings to String
+def tok(Map m) { m.collectEntries { k, v -> [k.toString(), v.toString()] } }
+
+def stageDir = { String sub -> file("${outDir}/stage/${sub}") }
+
+// "pkg-a, pkg-b" → "'pkg-a' 'pkg-b'"  (PKGBUILD array format)
+def archPkgFmt = { String s -> s.split(',').collect { "'${it.trim()}'" }.join(' ') }
+
+// Copy *.py sources + icons into a staging directory
+def stageSources = { File dst ->
+    copy {
+        from("src") { include "*.py" }
+        into(dst)
+        filter(ReplaceTokens, tokens: tok([xxx: version]))
+    }
+    copy { from "src/icons" into "${dst}/icons" }
+}
+
+// Create an uncompressed tar; arcName becomes the single root directory inside
+def makeTar = { File tarFile, String arcName, File sourceDir ->
+    ant.tar(destfile: tarFile, basedir: sourceDir.parent, includes: "${arcName}/**")
+}
+
+// Generate .SRCINFO content from PKGBUILD data (no makepkg required)
+def makeSrcInfo = { String pkgver, String pkgrel, String md5, String libs ->
+    def depLines = libs.split(',').collect { "\tdepends = ${it.trim()}" }.join("\n")
+"""\
+pkgbase = audiocut
+\tpkgdesc = MP3/FLAC/WAV audio cutter
+\tpkgver = ${pkgver}
+\tpkgrel = ${pkgrel}
+\turl = https://github.com/kanehekili/AudioCut
+\tarch = x86_64
+\tarch = aarch64
+\tlicense = GPL-2.0-or-later
+${depLines}
+\tsource = https://github.com/kanehekili/AudioCut/releases/download/${pkgver}/audiocut${pkgver}.tar
+\tmd5sums = ${md5}
+
+pkgname = audiocut
+"""
+}
+
+// ── README version sync ───────────────────────────────────────────────────────
+
+tasks.register("update_readme") {
+    description = "Rewrite version references in README.md to match settings.gradle"
+    group       = "packaging"
+    doLast {
+        def readme = file("README.md")
+        def text   = readme.text
+        text = text.replaceAll(/Version \d+\.\d+\.\d+/, "Version ${version}")
+        text = text.replaceAll(
+            /https:\/\/github\.com\/kanehekili\/AudioCut\/releases\/download\/[\d.]+\/audiocut[\d.]+\.tar/,
+            "https://github.com/kanehekili/AudioCut/releases/download/${version}/audiocut${version}.tar"
+        )
+        readme.text = text
+        println "  README.md synced to version ${version}"
+    }
+}
+
+// ── AUR ───────────────────────────────────────────────────────────────────────
+
+tasks.register("build_aur") {
+    description = "Generate dist/AUR/PKGBUILD and .SRCINFO"
+    group       = "packaging"
+
+    doLast {
+        def stage  = stageDir("audiocut")
+        def aurOut = file("${outDir}/AUR")
+        stage.mkdirs()
+        aurOut.mkdirs()
+
+        stageSources(stage)
+        copy { from "build/AudioCut.desktop" into stage }
+
+        // Source tarball (uploaded to GitHub Releases alongside the PKGBUILD)
+        def tarFile = file("${outDir}/audiocut${version}.tar")
+        makeTar(tarFile, "audiocut", stage)
+
+        def md5 = computeMD5(tarFile)
+        println "  AUR source tarball : ${tarFile.name}  md5=${md5}"
+
+        def archCfg = distros['arch']
+        copy {
+            from "build/AUR-template/PKGBUILD"
+            into aurOut
+            filter(ReplaceTokens, tokens: tok([
+                xxx      : version,
+                xpkgrelx : pkgrelease,
+                md5sum   : md5,
+                xlibsx   : archPkgFmt(archCfg.libs),
+            ]))
+        }
+
+        file("${aurOut}/.SRCINFO").text = makeSrcInfo(version, pkgrelease, md5, archCfg.libs)
+        println "  .SRCINFO generated"
+
+        delete stage
+    }
+}
+
+// ── DEB (one task per ubuntu distro) ─────────────────────────────────────────
+
+distros.findAll { _name, cfg -> cfg.type == "ubuntu" }.each { _name, cfg ->
+
+    tasks.register("build_${_name}") {
+        description = "Generate dist/DEB tarball for Ubuntu ${cfg.codename}"
+        group       = "packaging"
+
+        doLast {
+            def buildName = "audiocut_${version}+${pkgrelease}~${cfg.codename}"
+            def ubuStage  = stageDir(buildName)
+            def debOut    = file("${outDir}/DEB")
+            ubuStage.mkdirs()
+            debOut.mkdirs()
+
+            stageSources(file("${ubuStage}/src"))
+            copy { from "build/AudioCut.desktop" into "${ubuStage}/addons" }
+
+            def timestamp = ZonedDateTime.now(ZoneOffset.UTC)
+                .format(DateTimeFormatter.ofPattern("EEE, d MMM yyyy HH:mm:ss", Locale.ENGLISH))
+
+            // copyright is copied unfiltered — @ in email addresses would be
+            // misinterpreted as ReplaceTokens delimiters
+            copy {
+                from "build/DEB-template/debian"
+                into "${ubuStage}/debian"
+                exclude "copyright"
+                filter(ReplaceTokens, tokens: tok([
+                    ubu      : cfg.codename,
+                    xxx      : version,
+                    xpkgrelx : pkgrelease,
+                    xtsx     : timestamp,
+                    xlibsx   : cfg.libs,
+                ]))
+            }
+            copy {
+                from "build/DEB-template/debian/copyright"
+                into "${ubuStage}/debian"
+            }
+
+            def tarFile = file("${debOut}/${buildName}.tar")
+            makeTar(tarFile, buildName, ubuStage)
+            println "  → ${tarFile.name}"
+
+            delete ubuStage
+        }
+    }
+}
+
+// ── PyPI ──────────────────────────────────────────────────────────────────────
+
+tasks.register("build_pypi") {
+    description = "Stage dist/pypi/ ready for 'python -m build'"
+    group       = "packaging"
+
+    doLast {
+        def pypiOut = file("${outDir}/pypi")
+        def pkgDir  = file("${pypiOut}/audiocut")
+        pkgDir.mkdirs()
+
+        // Python package layout: audiocut/*.py + audiocut/icons/
+        copy {
+            from("src") { include "*.py" }
+            into(pkgDir)
+            filter(ReplaceTokens, tokens: tok([xxx: version]))
+        }
+        copy { from "src/icons" into "${pkgDir}/icons" }
+
+        // setuptools needs an __init__.py to recognise the directory as a package
+        file("${pkgDir}/__init__.py").text = ""
+
+        // Filled-in pyproject.toml and MANIFEST.in at the root of the staging dir
+        copy {
+            from "build/pypi-template"
+            into pypiOut
+            filter(ReplaceTokens, tokens: tok([xxx: version]))
+        }
+
+        // README for PyPI — fix screenshot URL and drop the GitHub release download badge
+        copy {
+            from "README.md"
+            into pypiOut
+            filter { line ->
+                if (line.contains('releases/download')) return null
+                line.replace(
+                    'https://github.com/kanehekili/AudioCut/blob/main/audiocut.png',
+                    'https://raw.githubusercontent.com/kanehekili/AudioCut/main/audiocut.png'
+                )
+            }
+        }
+
+        println "  PyPI stage ready: ${pypiOut}"
+        println "  Run:  cd ${pypiOut} && python -m build"
+    }
+}
+
+// ── aggregate ─────────────────────────────────────────────────────────────────
+
+tasks.register("clean") {
+    description = "Delete the dist/ output directory"
+    group       = "build"
+    doLast { delete outDir }
+}
+
+tasks.register("build_all") {
+    description = "Build all packages: AUR, DEB x${distros.count { it.value.type == 'ubuntu' }}, PyPI"
+    group       = "packaging"
+    dependsOn "update_readme"
+    dependsOn tasks.matching { t -> t.name.startsWith("build_") && t.name != "build_all" }
+    doLast { delete file("${outDir}/stage") }
+}
+
+defaultTasks "build_all"

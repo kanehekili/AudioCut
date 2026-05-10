@@ -1,0 +1,27 @@
+rootProject.name = "audiocut"
+
+// ── Release config ────────────────────────────────────────────────────────────
+// Edit version / pkgrelease here, then run:  gradle build_all
+gradle.ext.version    = "1.0.0"
+gradle.ext.pkgrelease = "1"
+
+// ── Target distros ────────────────────────────────────────────────────────────
+gradle.ext.distros = [
+
+    arch: [
+        type: "arch",
+        libs: "python-pyqt6, ffmpeg, python-numpy",
+    ],
+
+    ubu0: [
+        type:     "ubuntu",
+        codename: "noble",
+        libs:     "python3, ffmpeg, python3-pyqt6, python3-numpy",
+    ],
+
+    ubu1: [
+        type:     "ubuntu",
+        codename: "resolute",
+        libs:     "python3, ffmpeg, python3-pyqt6, python3-numpy",
+    ],
+]

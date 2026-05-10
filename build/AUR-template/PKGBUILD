@@ -1,0 +1,25 @@
+# Maintainer: Kanehekili <kanehekili.media@gmail.com>
+pkgname=audiocut
+pkgver=@xxx@
+pkgrel=@xpkgrelx@
+pkgdesc="MP3/FLAC/WAV audio cutter"
+url="https://github.com/kanehekili/AudioCut"
+license=('GPL-2.0-or-later')
+depends=(@xlibsx@)
+arch=('x86_64' 'aarch64')
+source=(https://github.com/kanehekili/AudioCut/releases/download/@xxx@/audiocut@xxx@.tar)
+md5sums=(@md5sum@)
+
+package() {
+  cd "${srcdir}/audiocut"
+
+  install -Dm 644 *.py         -t "${pkgdir}/opt/audiocut"
+  install -Dm 755 AudioCut.py  -t "${pkgdir}/opt/audiocut"
+  find icons -type f \
+    -exec install -Dm 644 "{}" "${pkgdir}/opt/audiocut/{}" \;
+
+  install -Dm 644 *.desktop -t "${pkgdir}/usr/share/applications"
+
+  install -d "${pkgdir}/usr/bin"
+  ln -s "/opt/audiocut/AudioCut.py" "${pkgdir}/usr/bin/audiocut"
+}
