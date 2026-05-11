@@ -175,6 +175,7 @@ distros.findAll { _name, cfg -> cfg.type == "ubuntu" }.each { _name, cfg ->
 tasks.register("build_pypi") {
     description = "Stage dist/pypi/ ready for 'python -m build'"
     group       = "packaging"
+    dependsOn   "update_readme"
 
     doLast {
         def pypiOut = file("${outDir}/pypi")
@@ -206,8 +207,8 @@ tasks.register("build_pypi") {
             filter { line ->
                 if (line.contains('releases/download')) return null
                 line.replace(
-                    'https://github.com/kanehekili/AudioCut/blob/main/audiocut.png',
-                    'https://raw.githubusercontent.com/kanehekili/AudioCut/main/audiocut.png'
+                    'https://github.com/kanehekili/AudioCut/blob/main/AudioCut.png',
+                    'https://raw.githubusercontent.com/kanehekili/AudioCut/main/AudioCut.png'
                 )
             }
         }

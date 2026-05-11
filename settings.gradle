@@ -2,7 +2,7 @@ rootProject.name = "audiocut"
 
 // ── Release config ────────────────────────────────────────────────────────────
 // Edit version / pkgrelease here, then run:  gradle build_all
-gradle.ext.version    = "1.0.1"
+gradle.ext.version    = "1.0.2"
 gradle.ext.pkgrelease = "1"
 
 // ── Target distros ────────────────────────────────────────────────────────────
