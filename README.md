@@ -1,9 +1,9 @@
 # AudioCut
 MP3/FLAC/WAV audio cutter- cutting audio files visually
 
-Version 1.0.1
+Version 1.0.3
 
-![Download](https://github.com/kanehekili/AudioCut/releases/download/V1.0.1/audiocut1.0.1.tar)
+![Download](https://github.com/kanehekili/AudioCut/releases/download/V1.0.3/audiocut1.0.3.tar)
 
 Audio cutter and joiner for Linux, based on ffmpeg. Cuts and joins audio files — optionally prepending or appending additional clips around the main selection.
 
@@ -111,6 +111,12 @@ If you are running a desktop environment with GTK/GNOME (as opposed to LXQt or K
 * Depending on the distro and version this variable may be one of: `gtk2`, `qt6ct`, `fusion`, `gtk3`
 
 ### Changes
+17.07.2026
+* Open a file directly from the command line: `audiocut <file>` (relative paths are resolved against the current directory; the file must exist)
+* Waveform now advances page-wise: when the cursor reaches the edge margin, the view jumps ahead and the cursor continues from the left margin
+* Set the Qt desktop file name so the correct icon and title are shown under Wayland
+* Internal cleanup: removed unused drag-finished signal and audio player helpers
+
 10.05.2026
 * Clear selection button (clears in/out markers without affecting the cut)
 * Waveform edge-scroll: auto-scrolls when cursor enters the 10 % margin on either side, during both drag and playback

@@ -62,6 +62,12 @@ class OSTools():
     def getPathWithoutExtension(self, path):
         return os.path.splitext(path)[0] if path else ""
 
+    def isAbsolute(self, path):
+        return os.path.isabs(path)
+
+    def getActiveDirectory(self):
+        return os.getcwd()
+
     def fileExists(self, path):
         return os.path.isfile(path)
 

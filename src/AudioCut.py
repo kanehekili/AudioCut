@@ -147,7 +147,6 @@ class JoinWorker(QtCore.QThread):
 class WaveformWidget(QtWidgets.QWidget):
     cursorPositioned = pyqtSignal(float)
     dragSeek         = pyqtSignal(float)
-    dragFinished     = pyqtSignal()
     scrollChanged    = pyqtSignal(int, int, int)
 
     def __init__(self, parent=None):
@@ -159,8 +158,7 @@ class WaveformWidget(QtWidgets.QWidget):
         self.out_pos          = None
         self._drag            = None
         self._scrollFrac      = 0.0
-        self._dragMoved       = False
-        self._slotBoundaries  = []   # list of (start_bar, end_bar, QColor)
+        self._slotBoundaries  = []
 
         self.setMinimumHeight(100)
         self.setSizePolicy(
@@ -204,7 +202,7 @@ class WaveformWidget(QtWidgets.QWidget):
 
     def setCursor(self, pos):
         self.cursor_pos = pos
-        self._scrollToCursor()
+        self._advanceView()
         self.update()
 
     def resetToStart(self):
@@ -279,7 +277,7 @@ class WaveformWidget(QtWidgets.QWidget):
         t_e = ((s + nv) / n) * self.duration
         return (t_s, t_e)
 
-    def _scrollToCursor(self):
+    def _advanceView(self):
         if self.peaks is None or self.duration <= 0:
             return
         n   = len(self.peaks)
@@ -294,7 +292,7 @@ class WaveformWidget(QtWidgets.QWidget):
         if cur_bar < s + margin:
             start = max(0, cur_bar - margin)
         elif cur_bar >= s + nv - margin:
-            start = min(max_s, cur_bar - (nv - margin))
+            start = min(max_s, cur_bar - margin)
         else:
             return
 
@@ -403,10 +401,9 @@ class WaveformWidget(QtWidgets.QWidget):
     def mousePressEvent(self, event):
         if event.button() != Qt.MouseButton.LeftButton or self.duration <= 0:
             return
-        self._dragMoved = False
         self._drag      = 'cursor'
         self.cursor_pos = self._xToPos(int(event.position().x()))
-        self._scrollToCursor()
+        self._advanceView()
         self.update()
         self.cursorPositioned.emit(self.cursor_pos)
 
@@ -414,18 +411,13 @@ class WaveformWidget(QtWidgets.QWidget):
         if self._drag is None or self.duration <= 0:
             return
         pos = self._xToPos(int(event.position().x()))
-        self._dragMoved = True
-        if self._drag == 'cursor':
-            self.cursor_pos = pos
-            self._scrollToCursor()
-            self.update()
-            self.dragSeek.emit(pos)
+        self.cursor_pos = pos
+        self._advanceView()
+        self.update()
+        self.dragSeek.emit(pos)
 
     def mouseReleaseEvent(self, event):
-        had_drag = self._drag is not None and self._dragMoved
         self._drag = None
-        if had_drag:
-            self.dragFinished.emit()
 
     def wheelEvent(self, event):
         if self.peaks is None:
@@ -507,9 +499,6 @@ class AudioPlayer(QtCore.QObject):
     def isPlaying(self):
         return self._player.playbackState() == QMediaPlayer.PlaybackState.PlayingState
 
-    def isLoaded(self, path):
-        return self._loadedPath == path
-
     def setRate(self, rate):
         self._player.setPlaybackRate(rate)
 
@@ -530,27 +519,22 @@ class AudioPlayer(QtCore.QObject):
     def stop(self):
         self._player.stop()
 
-    def shutdown(self):
-        self._player.stop()
-
 
 # ---------------------------------------------------------------------------
 
 class MainFrame(QtWidgets.QMainWindow):
 
-    def __init__(self):
+    def __init__(self, initial_file=None):
         super().__init__()
         self.setWindowTitle("AudioCut")
         self.setWindowIcon(self._icon("audiocut.png"))
         self.resize(1000, 280)
 
-        # _slots is ordered for playback: [prepend*, primary, append*]
-        # _primaryIdx points to the primary file's MediaData within _slots.
-        self._slots           = []    # list[MediaData]
+        self._slots           = []
         self._primaryIdx      = 0
-        self._clipMode        = None  # 'prepend' | 'append' | None
-        self._clipData        = None  # MediaData being assembled in clip mode
-        self._savedFile       = None  # primary filepath saved during clip mode
+        self._clipMode        = None
+        self._clipData        = None
+        self._savedFile       = None
         self._currentFile     = None
         self._outputPath      = None
         self._previewPath     = None
@@ -562,6 +546,8 @@ class MainFrame(QtWidgets.QMainWindow):
 
         self._buildUI()
         self._connectSignals()
+        if initial_file:
+            self._loadFile(initial_file)
 
     @staticmethod
     def _icon(name):
@@ -669,12 +655,14 @@ class MainFrame(QtWidgets.QMainWindow):
         )
         if not path:
             return
+        self._loadFile(path)
+
+    def _loadFile(self, path):
         Log.info("open: %s", path)
         self._actPlay.setIcon(self._icon("play.png"))
         self._outputPath      = None
         self._playingAssembly = False
         self._clearPreview()
-        self._currentFile = path
         primary = MediaData(
             filepath=path,
             peaks=np.zeros(0, dtype=np.float32),
@@ -1160,12 +1148,28 @@ class MainFrame(QtWidgets.QMainWindow):
 
 # ---------------------------------------------------------------------------
 
+def parseOptions(argv):
+    result = {"file": None}
+    args = [a for a in argv[1:] if not a.startswith("-")]
+    if args:
+        ost  = OSTools()
+        path = args[0]
+        if not ost.isAbsolute(path):
+            path = ost.joinPathes(ost.getActiveDirectory(), path)
+        if ost.fileExists(path):
+            result["file"] = path
+    return result
+
+
 def main():
     setupLogger()
-    app = QtWidgets.QApplication(sys.argv)
+    argv = sys.argv
+    res  = parseOptions(argv)
+    app  = QtWidgets.QApplication(argv)
     app.setApplicationName("AudioCut")
+    app.setDesktopFileName("AudioCut")
     _sigTimer = installSigIntHandler(app)
-    win = MainFrame()
+    win = MainFrame(initial_file=res["file"])
     win.show()
     sys.exit(app.exec())
 
