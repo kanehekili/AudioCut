@@ -24,4 +24,10 @@ gradle.ext.distros = [
         codename: "resolute",
         libs:     "python3, ffmpeg, python3-pyqt6, python3-numpy",
     ],
+
+    ubu2: [
+        type:     "ubuntu",
+        codename: "stonking",
+        libs:     "python3, ffmpeg, python3-pyqt6, python3-numpy",
+    ],
 ]
