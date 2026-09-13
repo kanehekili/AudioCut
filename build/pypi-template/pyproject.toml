@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,7 +7,7 @@ name = "audiocut"
 version = "@xxx@"
 description = "MP3/FLAC/WAV audio cutter"
 readme = "README.md"
-license = {text = "GPL-2.0-or-later"}
+license = "GPL-2.0-or-later"
 requires-python = ">=3.9"
 dependencies = ["PyQt6", "numpy"]
 
